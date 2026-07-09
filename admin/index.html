@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administración — NexoPlayStore</title>
+<link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+<link rel="stylesheet" href="admin.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+
+<!-- ===== Checking session ===== -->
+<div class="spin-screen" id="view-checking"><span class="spinner"></span></div>
+
+<!-- ===== Login ===== -->
+<div class="login-screen hidden" id="view-login">
+  <div class="login-box">
+    <div class="login-head">
+      <div class="login-icon"><i data-lucide="shield-check" style="color:#be00cc;width:28px;height:28px"></i></div>
+      <h1>Nexo<span style="color:#be00cc">Play</span>Store</h1>
+      <p>Panel de Administración</p>
+    </div>
+    <div class="login-card">
+      <div class="login-card-tag"><i data-lucide="lock" style="width:16px;height:16px;color:#be00cc"></i><span>Acceso Seguro</span></div>
+      <form id="login-form">
+        <label class="field-label">Contraseña</label>
+        <div class="field-wrap">
+          <i data-lucide="lock" class="icon-left"></i>
+          <input type="password" id="login-password" placeholder="••••••••••" required autocomplete="current-password">
+          <button type="button" class="toggle-pw" id="login-toggle-pw"><i data-lucide="eye"></i></button>
+        </div>
+        <p class="form-error hidden" id="login-error"></p>
+        <button type="submit" class="btn-submit" id="login-submit">
+          <i data-lucide="shield-check"></i><span>Entrar al Panel</span>
+        </button>
+      </form>
+    </div>
+    <p class="login-foot">Área restringida — Solo personal autorizado</p>
+  </div>
+</div>
+
+<!-- ===== App ===== -->
+<div class="app-layout hidden" id="view-app">
+
+  <div class="mobile-topbar">
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <i data-lucide="shield-check" style="color:#be00cc;width:20px;height:20px"></i>
+      <span style="font-family:var(--font-heading);font-weight:700;font-size:.9rem">Nexo<span style="color:#be00cc">Admin</span></span>
+    </div>
+    <button class="icon-btn" id="mobile-menu-btn"><i data-lucide="menu"></i></button>
+  </div>
+
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop"></div>
+    <div class="mobile-drawer-panel">
+      <nav class="sidebar-nav" id="mobile-nav"></nav>
+      <div class="sidebar-foot"><button id="mobile-logout-btn"><i data-lucide="log-out"></i>Cerrar sesión</button></div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="icon-box"><i data-lucide="shield-check" style="color:#be00cc;width:18px;height:18px"></i></div>
+      <span style="font-family:var(--font-heading);font-weight:700;font-size:.9rem">Nexo<span style="color:#be00cc">Admin</span></span>
+    </div>
+    <nav class="sidebar-nav" id="desktop-nav"></nav>
+    <div class="sidebar-foot"><button id="desktop-logout-btn"><i data-lucide="log-out"></i>Cerrar sesión</button></div>
+  </aside>
+
+  <div class="content">
+    <div class="content-inner">
+
+      <!-- Dashboard -->
+      <section id="page-dashboard" class="page">
+        <div class="page-head">
+          <h1>Dashboard</h1>
+          <p id="dashboard-date"></p>
+        </div>
+        <div id="dashboard-error"></div>
+        <div id="dashboard-loading" class="spin-screen" style="min-height:200px"><span class="spinner"></span></div>
+        <div id="dashboard-content" class="hidden">
+          <div class="stat-grid" id="stat-grid"></div>
+          <div class="summary-grid">
+            <div class="summary-card">
+              <div class="row"><i data-lucide="check-circle" style="width:16px;height:16px;color:#4ade80"></i><span>Ingresos totales</span></div>
+              <p class="big" id="total-revenue">$0</p>
+              <p class="hint">Todas las ventas exitosas</p>
+            </div>
+            <div class="summary-card">
+              <div class="row"><i data-lucide="trending-up" style="width:16px;height:16px;color:#4ade80"></i><span>Ganancia total</span></div>
+              <p class="big" id="total-profit" style="color:#4ade80">$0</p>
+              <p class="hint">Neto acumulado</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Ventas recientes</h2><a href="#/sales">Ver todas →</a></div>
+            <div id="recent-sales"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Games -->
+      <section id="page-games" class="page hidden">
+        <div class="page-head-row">
+          <div>
+            <h1>Juegos</h1>
+            <p>Catálogo sincronizado con Firebase</p>
+          </div>
+          <button class="btn btn-primary" id="add-game-btn"><i data-lucide="plus"></i><span>Agregar</span></button>
+        </div>
+        <div class="panel">
+          <div class="table-head-row games-head">
+            <span>Juego</span><span>Precio</span><span>Costo</span><span>Ganancia</span><span>Estado</span><span>Acciones</span>
+          </div>
+          <div id="games-error"></div>
+          <div id="games-loading" class="spin-screen" style="min-height:150px"><span class="spinner"></span></div>
+          <div id="games-list"></div>
+        </div>
+      </section>
+
+      <!-- Sales -->
+      <section id="page-sales" class="page hidden">
+        <div class="page-head-row">
+          <div>
+            <h1>Ventas</h1>
+            <p id="sales-count">0 registros · Tiempo real</p>
+          </div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-outline" id="export-csv-btn"><i data-lucide="download"></i><span>Exportar Excel</span></button>
+            <button class="btn btn-primary" id="add-sale-btn"><i data-lucide="plus"></i><span>Nueva venta</span></button>
+          </div>
+        </div>
+
+        <div class="filters-panel">
+          <div class="filters-top"><i data-lucide="filter" style="width:14px;height:14px"></i><span>Filtros</span><button id="clear-filters-btn">Limpiar</button></div>
+          <div class="filters-grid">
+            <input type="text" id="filter-search" placeholder="Buscar cliente, tag, ID...">
+            <select id="filter-status">
+              <option value="">Todos los estados</option>
+              <option>Pendiente</option><option>Entregado</option><option>Fallido</option>
+            </select>
+            <select id="filter-game"><option value="">Todos los juegos</option></select>
+            <input type="date" id="filter-date">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="table-head-row sales-head">
+            <span>ID</span><span>Cliente</span><span>Juego / Cantidad</span><span>Precio</span><span>Ganancia</span><span>Estado</span><span>Acciones</span>
+          </div>
+          <div id="sales-error"></div>
+          <div id="sales-loading" class="spin-screen" style="min-height:150px"><span class="spinner"></span></div>
+          <div id="sales-list" style="max-height:60vh;overflow-y:auto"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== Game modal ===== -->
+<div class="overlay" id="game-modal">
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2 id="game-modal-title">Agregar juego</h2>
+      <button class="icon-btn" id="game-modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="overlay-body">
+      <p class="form-error hidden" id="game-save-error"></p>
+      <div class="field-row-4">
+        <div><label class="field-label">Emoji</label><input id="game-emoji" style="text-align:center;font-size:1.2rem;width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem;color:#fff"></div>
+        <div><label class="field-label">Nombre</label><input id="game-name" placeholder="Diamantes Free Fire" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+      </div>
+      <div>
+        <label class="field-label">Moneda / Ítem</label>
+        <input id="game-currency" placeholder="Diamantes, Robux, UC..." style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff">
+      </div>
+      <div class="field-row-2">
+        <div><label class="field-label">Precio venta (COP)</label><input type="number" id="game-price" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+        <div><label class="field-label">Costo (COP)</label><input type="number" id="game-cost" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+      </div>
+      <div class="mini-note"><span>Ganancia estimada</span><strong id="game-profit-preview">$0 (0%)</strong></div>
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button type="button" class="toggle on" id="game-active-toggle"><span class="knob"></span></button>
+        <span style="font-size:.85rem;color:#d1d5db" id="game-active-label">Activo en la tienda</span>
+      </div>
+    </div>
+    <div class="overlay-foot">
+      <button class="btn btn-outline" id="game-modal-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="game-modal-save"><i data-lucide="check"></i>Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Delete game confirm ===== -->
+<div class="overlay" id="game-delete-modal">
+  <div class="overlay-card sm">
+    <i data-lucide="trash-2" style="width:40px;height:40px;color:#f87171;margin:0 auto 1rem"></i>
+    <h2 style="margin-bottom:.5rem">¿Eliminar juego?</h2>
+    <p style="color:#9ca3af;font-size:.85rem;margin-bottom:1.25rem">Esta acción no se puede deshacer.</p>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-outline" id="game-delete-cancel" style="flex:1;justify-content:center">Cancelar</button>
+      <button class="btn" id="game-delete-confirm" style="flex:1;justify-content:center;background:#ef4444;color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Sale modal ===== -->
+<div class="overlay" id="sale-modal">
+  <div class="overlay-card">
+    <div class="overlay-head">
+      <h2>Registrar venta</h2>
+      <button class="icon-btn" id="sale-modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="overlay-body">
+      <p class="form-error hidden" id="sale-save-error"></p>
+      <div>
+        <label class="field-label">Juego *</label>
+        <select id="sale-game" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff">
+          <option value="">Selecciona un juego</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Cantidad / Ítem</label>
+        <input id="sale-amount" placeholder="ej. 310 Diamantes" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff">
+      </div>
+      <div class="field-row-2">
+        <div><label class="field-label">Nombre cliente</label><input id="sale-customer" placeholder="Carlos M." style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+        <div><label class="field-label">Tag del jugador</label><input id="sale-tag" placeholder="ID / usuario" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+      </div>
+      <div class="field-row-2">
+        <div><label class="field-label">Precio cobrado (COP)</label><input type="number" id="sale-price" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+        <div><label class="field-label">Costo (COP)</label><input type="number" id="sale-cost" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+      </div>
+      <div class="mini-note hidden" id="sale-profit-preview-wrap"><span>Ganancia</span><strong id="sale-profit-preview">$0</strong></div>
+      <div>
+        <label class="field-label">Estado inicial</label>
+        <div class="status-choice-row" id="sale-status-row">
+          <button type="button" class="status-choice active-Pendiente" data-status="Pendiente">Pendiente</button>
+          <button type="button" class="status-choice" data-status="Entregado">Entregado</button>
+          <button type="button" class="status-choice" data-status="Fallido">Fallido</button>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Notas</label>
+        <textarea id="sale-notes" rows="2" placeholder="Observaciones opcionales..."></textarea>
+      </div>
+    </div>
+    <div class="overlay-foot">
+      <button class="btn btn-outline" id="sale-modal-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="sale-modal-save"><i data-lucide="check"></i>Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Delete sale confirm ===== -->
+<div class="overlay" id="sale-delete-modal">
+  <div class="overlay-card sm">
+    <i data-lucide="trash-2" style="width:40px;height:40px;color:#f87171;margin:0 auto 1rem"></i>
+    <h2 style="margin-bottom:.5rem">¿Eliminar venta?</h2>
+    <p style="color:#9ca3af;font-size:.85rem;margin-bottom:1.25rem">Esta acción no se puede deshacer.</p>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-outline" id="sale-delete-cancel" style="flex:1;justify-content:center">Cancelar</button>
+      <button class="btn" id="sale-delete-confirm" style="flex:1;justify-content:center;background:#ef4444;color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
