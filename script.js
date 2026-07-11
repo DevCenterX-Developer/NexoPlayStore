@@ -35,10 +35,14 @@ const IMAGE_RULES = [
   { keywords: ["clash"], image: "images/clash.png" },
 ];
 function imageForGame(g) {
-  if (g.image) return g.image;
-  const lower = (g.name || "").toLowerCase();
-  const rule = IMAGE_RULES.find(r => r.keywords.some(k => lower.includes(k)));
-  return rule ? rule.image : null;
+  const raw = g.image || (() => {
+    const lower = (g.name || "").toLowerCase();
+    const rule = IMAGE_RULES.find(r => r.keywords.some(k => lower.includes(k)));
+    return rule ? rule.image : null;
+  })();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return "/" + raw.replace(/^\.?\//, "");
 }
 
 // ── Catálogo de juegos — cargado en vivo desde Firestore (colección "games") ─

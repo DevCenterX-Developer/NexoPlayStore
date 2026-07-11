@@ -54,7 +54,7 @@ const AVAILABLE_IMAGES = ["images/freefire.png", "images/roblox.png", "images/pu
 function resolveImageSrc(path) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
-  return "../" + path.replace(/^\.?\//, "");
+  return "/" + path.replace(/^\.?\//, "");
 }
 function thumbHtml(image, size) {
   const src = resolveImageSrc(image);
@@ -149,7 +149,7 @@ function showApp() {
   icons();
 }
 
-if (isAdminLoggedIn()) showApp(); else showLogin();
+// (el arranque real está al final del archivo, después de declarar todo)
 
 // ── Login form ────────────────────────────────────────────────────────────
 const loginForm = document.getElementById("login-form");
@@ -219,7 +219,7 @@ function buildNav() {
 const drawer = document.getElementById("mobile-drawer");
 document.getElementById("mobile-menu-btn").addEventListener("click", () => drawer.classList.add("open"));
 document.getElementById("mobile-drawer-backdrop").addEventListener("click", closeDrawer);
-function closeDrawer() { drawer.classList.remove("open"); }
+function closeDrawer() { document.getElementById("mobile-drawer").classList.remove("open"); }
 
 const pages = { "#/dashboard": "page-dashboard", "#/games": "page-games", "#/sales": "page-sales" };
 let gamesUnsub = null, salesUnsub = null, dashUnsub = null;
@@ -659,3 +659,8 @@ document.getElementById("sale-modal-save").addEventListener("click", async () =>
 });
 
 icons();
+
+// ── Arranque ──────────────────────────────────────────────────────────────
+// Se ejecuta al final, cuando todas las constantes/funciones ya existen,
+// para evitar errores de "Cannot access ... before initialization".
+if (isAdminLoggedIn()) showApp(); else showLogin();
