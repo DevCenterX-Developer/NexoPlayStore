@@ -1,6 +1,5 @@
 // ─── NexoPlayStore — Panel de Administración ─────────────────────────────────
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getAuth, signInAnonymously, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDocs,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -15,24 +14,21 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
 
 const icons = () => { if (window.lucide) lucide.createIcons(); };
 
-// ── Admin auth (simple password) ─────────────────────────────────────────
+// ── Admin auth (simple password, sin Firebase Auth) ──────────────────────
 const ADMIN_SESSION_KEY = "nexo_admin_ok";
 const ADMIN_PASSWORD = "NexoStore";
 
-async function adminLogin(password) {
+function adminLogin(password) {
   if (password !== ADMIN_PASSWORD) return false;
-  try { await signInAnonymously(auth); } catch { /* rules may be open */ }
   sessionStorage.setItem(ADMIN_SESSION_KEY, "1");
   return true;
 }
-async function adminLogout() {
+function adminLogout() {
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  try { await fbSignOut(auth); } catch {}
 }
 function isAdminLoggedIn() {
   return sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
@@ -43,12 +39,29 @@ const GAMES_COL = "games";
 const SALES_COL = "sales";
 
 const DEFAULT_GAMES = [
-  { name: "Diamantes Free Fire", emoji: "💎", currency: "Diamantes", price: 15000, cost: 11000, active: true },
-  { name: "Robux Roblox", emoji: "🎮", currency: "Robux", price: 12000, cost: 9000, active: true },
-  { name: "UC PUBG Mobile", emoji: "🚀", currency: "UC", price: 18000, cost: 13000, active: true },
-  { name: "CP COD Mobile", emoji: "🔥", currency: "CP", price: 16000, cost: 12000, active: true },
-  { name: "Clash of Clans / Royale", emoji: "⚔️", currency: "Gemas", price: 14000, cost: 10500, active: true },
+  { name: "Diamantes Free Fire", image: "images/freefire.png", currency: "Diamantes", price: 15000, cost: 11000, active: true },
+  { name: "Robux Roblox", image: "images/roblox.png", currency: "Robux", price: 12000, cost: 9000, active: true },
+  { name: "UC PUBG Mobile", image: "images/pubg.png", currency: "UC", price: 18000, cost: 13000, active: true },
+  { name: "CP COD Mobile", image: "images/codm.png", currency: "CP", price: 16000, cost: 12000, active: true },
+  { name: "Clash of Clans / Royale", image: "images/clash.png", currency: "Gemas", price: 14000, cost: 10500, active: true },
 ];
+
+// Rutas disponibles en /images para sugerir en el campo de imagen
+const AVAILABLE_IMAGES = ["images/freefire.png", "images/roblox.png", "images/pubg.png", "images/codm.png", "images/clash.png"];
+
+// Convierte la ruta guardada (relativa a la raíz del proyecto) en una ruta válida
+// desde /admin/, o la deja igual si ya es una URL http(s).
+function resolveImageSrc(path) {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  return "../" + path.replace(/^\.?\//, "");
+}
+function thumbHtml(image, size) {
+  const src = resolveImageSrc(image);
+  return src
+    ? `<img src="${src}" alt="" style="width:${size}px;height:${size}px;border-radius:8px;object-fit:cover;flex-shrink:0" onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'<i data-lucide=\\'gamepad-2\\'></i>',style:'width:${size}px;height:${size}px;border-radius:8px;background:rgba(190,0,204,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0'}))">`
+    : `<div style="width:${size}px;height:${size}px;border-radius:8px;background:rgba(190,0,204,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="gamepad-2" style="width:${Math.round(size*0.55)}px;height:${Math.round(size*0.55)}px;color:#be00cc"></i></div>`;
+}
 
 async function ensureGamesSeeded() {
   try {
@@ -131,24 +144,12 @@ function showApp() {
   viewLogin.classList.add("hidden");
   viewApp.classList.remove("hidden");
   ensureGamesSeeded();
-  buildNav();
+  applyLayoutMode();
   router();
   icons();
 }
 
-async function bootstrap() {
-  if (isAdminLoggedIn()) {
-    try {
-      await signInAnonymously(auth);
-    } catch (err) {
-      console.error("No se pudo restablecer la sesión de Firebase:", err);
-    }
-    showApp();
-  } else {
-    showLogin();
-  }
-}
-bootstrap();
+if (isAdminLoggedIn()) showApp(); else showLogin();
 
 // ── Login form ────────────────────────────────────────────────────────────
 const loginForm = document.getElementById("login-form");
@@ -169,7 +170,7 @@ loginForm.addEventListener("submit", async (e) => {
   loginSubmit.disabled = true;
   const original = loginSubmit.innerHTML;
   loginSubmit.innerHTML = `<span class="spinner sm"></span> Verificando...`;
-  const ok = await adminLogin(loginPassword.value);
+  const ok = adminLogin(loginPassword.value);
   loginSubmit.disabled = false;
   loginSubmit.innerHTML = original;
   icons();
@@ -183,8 +184,8 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
-async function doLogout() {
-  await adminLogout();
+function doLogout() {
+  adminLogout();
   showLogin();
   loginForm.reset();
 }
@@ -197,6 +198,14 @@ const NAV = [
   { hash: "#/games", icon: "gamepad-2", label: "Juegos" },
   { hash: "#/sales", icon: "shopping-bag", label: "Ventas" },
 ];
+
+function applyLayoutMode() {
+  const isMobile = window.innerWidth < 768;
+  document.querySelector(".sidebar").style.display = isMobile ? "none" : "flex";
+  document.querySelector(".mobile-topbar").style.display = isMobile ? "flex" : "none";
+  if (!isMobile) closeDrawer();
+}
+window.addEventListener("resize", applyLayoutMode);
 
 function buildNav() {
   const current = location.hash || "#/dashboard";
@@ -278,7 +287,7 @@ function renderDashboard(sales) {
     ? `<p class="empty-msg">Sin ventas registradas aún</p>`
     : recent.map(s => `
       <div class="recent-row">
-        <span style="font-size:1.3rem">${s.gameEmoji}</span>
+        ${thumbHtml(s.gameImage, 30)}
         <div style="flex:1;min-width:0">
           <p class="name">${s.customerName}</p>
           <p class="sub">${s.amount} · ${new Date(s.date).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}</p>
@@ -316,7 +325,7 @@ function renderGamesList(games) {
       <div class="mobile-card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
           <div style="display:flex;align-items:center;gap:.5rem">
-            <span style="font-size:1.4rem">${g.emoji}</span>
+            ${thumbHtml(g.image, 40)}
             <div><p style="font-size:.9rem;font-weight:600">${g.name}</p><p style="font-size:.75rem;color:#6b7280">${g.currency}</p></div>
           </div>
           <span class="chip ${g.active ? "chip-active" : "chip-inactive"}">${g.active ? "Activo" : "Inactivo"}</span>
@@ -333,7 +342,7 @@ function renderGamesList(games) {
         </div>
       </div>
       <div class="desktop-row games-row">
-        <div style="display:flex;align-items:center;gap:.75rem"><span style="font-size:1.2rem">${g.emoji}</span><div><p style="font-size:.9rem">${g.name}</p><p style="font-size:.75rem;color:#6b7280">${g.currency}</p></div></div>
+        <div style="display:flex;align-items:center;gap:.75rem">${thumbHtml(g.image, 34)}<div><p style="font-size:.9rem">${g.name}</p><p style="font-size:.75rem;color:#6b7280">${g.currency}</p></div></div>
         <p style="font-size:.9rem">${fmt(g.price)}</p>
         <p style="font-size:.9rem;color:#9ca3af">${fmt(g.cost)}</p>
         <p style="font-size:.9rem;color:#4ade80;font-weight:600">${fmt(g.price - g.cost)}</p>
@@ -360,7 +369,8 @@ function renderGamesList(games) {
 
 // Game modal
 const gameModal = document.getElementById("game-modal");
-const gameEmoji = document.getElementById("game-emoji");
+const gameImage = document.getElementById("game-image");
+const gameImagePreview = document.getElementById("game-image-preview");
 const gameName = document.getElementById("game-name");
 const gameCurrency = document.getElementById("game-currency");
 const gamePrice = document.getElementById("game-price");
@@ -371,15 +381,21 @@ const gameProfitPreview = document.getElementById("game-profit-preview");
 const gameSaveError = document.getElementById("game-save-error");
 let gameActive = true;
 
+function updateGameImagePreview() {
+  gameImagePreview.innerHTML = thumbHtml(gameImage.value.trim(), 44);
+  icons();
+}
+
 function openGameModal(game) {
   editingGameId = game ? game.id : null;
   document.getElementById("game-modal-title").textContent = game ? "Editar juego" : "Agregar juego";
-  gameEmoji.value = game ? game.emoji : "🎮";
+  gameImage.value = game ? (game.image || "") : "";
   gameName.value = game ? game.name : "";
   gameCurrency.value = game ? game.currency : "";
   gamePrice.value = game ? game.price : 0;
   gameCost.value = game ? game.cost : 0;
   gameActive = game ? game.active : true;
+  updateGameImagePreview();
   updateGameToggleUI();
   updateGameProfitPreview();
   gameSaveError.classList.add("hidden");
@@ -399,6 +415,7 @@ function updateGameProfitPreview() {
   gameProfitPreview.style.color = profit >= 0 ? "#4ade80" : "#f87171";
 }
 [gamePrice, gameCost].forEach(el => el.addEventListener("input", updateGameProfitPreview));
+gameImage.addEventListener("input", updateGameImagePreview);
 gameActiveToggle.addEventListener("click", () => { gameActive = !gameActive; updateGameToggleUI(); });
 
 document.getElementById("add-game-btn").addEventListener("click", () => openGameModal(null));
@@ -413,7 +430,7 @@ document.getElementById("game-modal-save").addEventListener("click", async () =>
   try {
     const game = {
       id: editingGameId ?? newGameId(),
-      name: gameName.value, emoji: gameEmoji.value || "🎮", currency: gameCurrency.value,
+      name: gameName.value, image: gameImage.value.trim(), currency: gameCurrency.value,
       price: Number(gamePrice.value) || 0, cost: Number(gameCost.value) || 0, active: gameActive,
     };
     await saveGame(game);
@@ -439,12 +456,12 @@ function populateGameSelect(games) {
   const saleSelect = document.getElementById("sale-game");
   if (filterSelect) {
     const cur = filterSelect.value;
-    filterSelect.innerHTML = `<option value="">Todos los juegos</option>` + games.map(g => `<option value="${g.id}">${g.emoji} ${g.name}</option>`).join("");
+    filterSelect.innerHTML = `<option value="">Todos los juegos</option>` + games.map(g => `<option value="${g.id}">${g.name}</option>`).join("");
     filterSelect.value = cur;
   }
   if (saleSelect) {
     const cur = saleSelect.value;
-    saleSelect.innerHTML = `<option value="">Selecciona un juego</option>` + games.map(g => `<option value="${g.id}">${g.emoji} ${g.name}</option>`).join("");
+    saleSelect.innerHTML = `<option value="">Selecciona un juego</option>` + games.map(g => `<option value="${g.id}">${g.name}</option>`).join("");
     saleSelect.value = cur;
   }
 }
@@ -524,7 +541,7 @@ function renderSalesList() {
           <span class="badge badge-${s.status}"><i data-lucide="${STATUS_ICON[s.status]}" style="width:11px;height:11px"></i>${s.status}</span>
         </div>
         <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;font-size:.85rem">
-          <span>${s.gameEmoji}</span><span style="color:#d1d5db">${s.amount}</span>
+          ${thumbHtml(s.gameImage, 22)}<span style="color:#d1d5db">${s.amount}</span>
           <span style="margin-left:auto;font-weight:600">${fmt(s.price)}</span>
           <span style="color:#4ade80;font-size:.75rem">+${fmt(s.profit)}</span>
         </div>
@@ -537,7 +554,7 @@ function renderSalesList() {
       <div class="desktop-row sales-row">
         <p style="font-size:.75rem;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis">${s.id}</p>
         <div><p style="font-size:.9rem">${s.customerName}</p><p style="font-size:.75rem;color:#6b7280">${s.playerTag} · ${new Date(s.date).toLocaleDateString("es-CO")}</p></div>
-        <div><p style="font-size:.9rem">${s.gameEmoji} ${s.amount}</p><p style="font-size:.75rem;color:#6b7280">${s.gameName}</p></div>
+        <div style="display:flex;align-items:center;gap:.5rem">${thumbHtml(s.gameImage, 26)}<div><p style="font-size:.9rem">${s.amount}</p><p style="font-size:.75rem;color:#6b7280">${s.gameName}</p></div></div>
         <p style="font-size:.9rem;font-weight:600">${fmt(s.price)}</p>
         <p style="font-size:.9rem;color:#4ade80">+${fmt(s.profit)}</p>
         <span class="badge badge-${s.status}"><i data-lucide="${STATUS_ICON[s.status]}" style="width:11px;height:11px"></i>${s.status}</span>
@@ -624,7 +641,7 @@ document.getElementById("sale-modal-save").addEventListener("click", async () =>
   btn.innerHTML = `<span class="spinner sm"></span> Registrar`;
   try {
     const sale = {
-      id: newSaleId(), gameId: g.id, gameName: g.name, gameEmoji: g.emoji,
+      id: newSaleId(), gameId: g.id, gameName: g.name, gameImage: g.image,
       amount: saleAmount.value, price: Number(salePrice.value) || 0,
       profit: (Number(salePrice.value) || 0) - (Number(saleCost.value) || 0),
       status: saleStatus, date: new Date().toISOString(),

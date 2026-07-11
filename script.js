@@ -25,7 +25,8 @@ const db = getFirestore(app);
 // ── WhatsApp ───────────────────────────────────────────────────────────────
 const WHATSAPP_NUMBER = "573228878237";
 
-// ── Imagen local según palabras clave del nombre del juego ─────────────────
+// ── Resuelve la imagen del juego: campo "image" de Firestore, si no,
+//    coincidencia por nombre, si no, ícono genérico ─────────────────────────
 const IMAGE_RULES = [
   { keywords: ["free fire", "freefire"], image: "images/freefire.png" },
   { keywords: ["roblox", "robux"], image: "images/roblox.png" },
@@ -33,8 +34,9 @@ const IMAGE_RULES = [
   { keywords: ["cod", "call of duty"], image: "images/codm.png" },
   { keywords: ["clash"], image: "images/clash.png" },
 ];
-function imageForGame(name) {
-  const lower = (name || "").toLowerCase();
+function imageForGame(g) {
+  if (g.image) return g.image;
+  const lower = (g.name || "").toLowerCase();
   const rule = IMAGE_RULES.find(r => r.keywords.some(k => lower.includes(k)));
   return rule ? rule.image : null;
 }
@@ -61,12 +63,12 @@ function renderGames(games) {
     const message = `Hola NexoPlayStore! Quiero recargar ${g.currency || ""} para ${g.name}.`;
     const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     const nameHtml = g.name.split(" ").map((w, i) => i === 0 ? `${w}<br>` : `${w} `).join("");
-    const img = imageForGame(g.name);
+    const img = imageForGame(g);
     return `
       <div class="game-card">
         ${img
-          ? `<img src="${img}" alt="${g.name}" loading="lazy">`
-          : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,#1a0f33,#2a1650)">${g.emoji || "🎮"}</div>`}
+          ? `<img src="${img}" alt="${g.name}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'<i data-lucide=\\'gamepad-2\\'></i>',style:'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3.5rem;background:linear-gradient(135deg,#1a0f33,#2a1650)'}))">`
+          : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0f33,#2a1650)"><i data-lucide="gamepad-2" style="width:56px;height:56px;color:#be00cc"></i></div>`}
         <div class="game-card-overlay">
           <h3>${nameHtml}</h3>
           <a class="recharge" href="${link}" target="_blank" rel="noopener noreferrer">

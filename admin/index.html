@@ -168,9 +168,24 @@
     </div>
     <div class="overlay-body">
       <p class="form-error hidden" id="game-save-error"></p>
-      <div class="field-row-4">
-        <div><label class="field-label">Emoji</label><input id="game-emoji" style="text-align:center;font-size:1.2rem;width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem;color:#fff"></div>
-        <div><label class="field-label">Nombre</label><input id="game-name" placeholder="Diamantes Free Fire" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff"></div>
+      <div>
+        <label class="field-label">Imagen del juego</label>
+        <div style="display:flex;gap:.6rem;align-items:center">
+          <div id="game-image-preview" style="flex-shrink:0"></div>
+          <input id="game-image" list="image-suggestions" placeholder="images/freefire.png o https://..." style="flex:1;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff">
+        </div>
+        <datalist id="image-suggestions">
+          <option value="images/freefire.png">
+          <option value="images/roblox.png">
+          <option value="images/pubg.png">
+          <option value="images/codm.png">
+          <option value="images/clash.png">
+        </datalist>
+        <p style="font-size:.7rem;color:#6b7280;margin-top:.35rem">Usa una ruta de la carpeta /images del proyecto, o pega la URL de una imagen.</p>
+      </div>
+      <div>
+        <label class="field-label">Nombre</label>
+        <input id="game-name" placeholder="Diamantes Free Fire" style="width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;color:#fff">
       </div>
       <div>
         <label class="field-label">Moneda / Ítem</label>
