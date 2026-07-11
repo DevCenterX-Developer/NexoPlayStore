@@ -4,6 +4,9 @@ import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // ── Firebase config ───────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -17,27 +20,53 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 // ── WhatsApp ───────────────────────────────────────────────────────────────
 const WHATSAPP_NUMBER = "573228878237";
 
-// ── Catálogo de juegos (estático, igual al original) ───────────────────────
-const games = [
-  { id: "freefire", name: "Diamantes Free Fire", image: "images/freefire.png", message: "Hola NexoPlayStore! Quiero recargar diamantes para Free Fire." },
-  { id: "roblox", name: "Robux Roblox", image: "images/roblox.png", message: "Hola NexoPlayStore! Quiero recargar Robux para Roblox." },
-  { id: "pubg", name: "UC PUBG Mobile", image: "images/pubg.png", message: "Hola NexoPlayStore! Quiero recargar UC para PUBG Mobile." },
-  { id: "codm", name: "CP COD Mobile", image: "images/codm.png", message: "Hola NexoPlayStore! Quiero recargar CP para Call of Duty Mobile." },
-  { id: "clash", name: "Clash of Clans / Royale", image: "images/clash.png", message: "Hola NexoPlayStore! Quiero recargar para Clash." },
+// ── Imagen local según palabras clave del nombre del juego ─────────────────
+const IMAGE_RULES = [
+  { keywords: ["free fire", "freefire"], image: "images/freefire.png" },
+  { keywords: ["roblox", "robux"], image: "images/roblox.png" },
+  { keywords: ["pubg", "uc"], image: "images/pubg.png" },
+  { keywords: ["cod", "call of duty"], image: "images/codm.png" },
+  { keywords: ["clash"], image: "images/clash.png" },
 ];
+function imageForGame(name) {
+  const lower = (name || "").toLowerCase();
+  const rule = IMAGE_RULES.find(r => r.keywords.some(k => lower.includes(k)));
+  return rule ? rule.image : null;
+}
 
-function renderGames() {
-  const grid = document.getElementById("games-grid");
+// ── Catálogo de juegos — cargado en vivo desde Firestore (colección "games") ─
+const grid = document.getElementById("games-grid");
+grid.innerHTML = `<p style="color:#9ca3af;text-align:center;grid-column:1/-1">Cargando catálogo...</p>`;
+
+onSnapshot(collection(db, "games"), snap => {
+  const games = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(g => g.active !== false);
+  renderGames(games);
+}, err => {
+  grid.innerHTML = `<p style="color:#f87171;text-align:center;grid-column:1/-1">No se pudo cargar el catálogo: ${err.message}</p>`;
+});
+
+function renderGames(games) {
+  if (games.length === 0) {
+    grid.innerHTML = `<p style="color:#9ca3af;text-align:center;grid-column:1/-1">Aún no hay juegos publicados.</p>`;
+    return;
+  }
   grid.innerHTML = games.map(g => {
-    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(g.message)}`;
+    const message = `Hola NexoPlayStore! Quiero recargar ${g.currency || ""} para ${g.name}.`;
+    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     const nameHtml = g.name.split(" ").map((w, i) => i === 0 ? `${w}<br>` : `${w} `).join("");
+    const img = imageForGame(g.name);
     return `
       <div class="game-card">
-        <img src="${g.image}" alt="${g.name}" loading="lazy">
+        ${img
+          ? `<img src="${img}" alt="${g.name}" loading="lazy">`
+          : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,#1a0f33,#2a1650)">${g.emoji || "🎮"}</div>`}
         <div class="game-card-overlay">
           <h3>${nameHtml}</h3>
           <a class="recharge" href="${link}" target="_blank" rel="noopener noreferrer">
@@ -48,7 +77,6 @@ function renderGames() {
   }).join("");
   if (window.lucide) lucide.createIcons();
 }
-renderGames();
 
 // ── Footer year ──────────────────────────────────────────────────────────
 document.getElementById("footer-year").textContent =

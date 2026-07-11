@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, signInAnonymously, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy,
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, getDocs,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -50,13 +50,20 @@ const DEFAULT_GAMES = [
   { name: "Clash of Clans / Royale", emoji: "⚔️", currency: "Gemas", price: 14000, cost: 10500, active: true },
 ];
 
+async function ensureGamesSeeded() {
+  try {
+    const snap = await getDocs(collection(db, GAMES_COL));
+    if (snap.empty) {
+      await Promise.all(DEFAULT_GAMES.map(g => setDoc(doc(collection(db, GAMES_COL)), g)));
+    }
+  } catch (err) {
+    console.error("No se pudo verificar/sembrar el catálogo de juegos:", err);
+  }
+}
+
 function subscribeGames(onData, onError) {
   return onSnapshot(collection(db, GAMES_COL), snap => {
-    const games = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (games.length === 0) {
-      DEFAULT_GAMES.forEach(g => setDoc(doc(collection(db, GAMES_COL)), g));
-    }
-    onData(games);
+    onData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
   }, err => onError?.(err));
 }
 async function saveGame(game) {
@@ -123,12 +130,25 @@ function showApp() {
   viewChecking.classList.add("hidden");
   viewLogin.classList.add("hidden");
   viewApp.classList.remove("hidden");
+  ensureGamesSeeded();
   buildNav();
   router();
   icons();
 }
 
-if (isAdminLoggedIn()) showApp(); else showLogin();
+async function bootstrap() {
+  if (isAdminLoggedIn()) {
+    try {
+      await signInAnonymously(auth);
+    } catch (err) {
+      console.error("No se pudo restablecer la sesión de Firebase:", err);
+    }
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+bootstrap();
 
 // ── Login form ────────────────────────────────────────────────────────────
 const loginForm = document.getElementById("login-form");
